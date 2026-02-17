@@ -200,7 +200,7 @@ SET(RV_DEPS_OPENJPH_DOWNLOAD_HASH
 
 # otio https://github.com/AcademySoftwareFoundation/OpenTimelineIO
 SET(RV_DEPS_OTIO_VERSION
-    "0.18.1"
+    "0.16.0"
 )
 
 # pcre2 https://github.com/PCRE2Project/pcre2
