@@ -1,1 +1,335 @@
+name: OpenRV_Build
 
+on:
+  # push:
+  #   branches:
+  #     # This will run when PR is merged or direct pushes to main.
+  #     - main
+
+  pull_request: # This handles PR creation and subsequent commits.
+
+  # schedule:
+  #   # Midnight build every day
+  #   - cron: "0 0 * * *"
+
+  # This allows manual triggering of the workflow from the web
+  workflow_dispatch:
+    inputs:
+      SKIP_DEPS_CACHE:
+        description: 'Skip dependencies caching'
+        required: true
+        default: 'false'
+
+env:
+  QT5_MODULES: 'debug_info qtcharts qtdatavis3d qtlottie qtnetworkauth qtquick3d qtquicktimeline qtscript qtwebengine qtwebglplugin'
+  ROCKY_QT5_ARCHIVES: 'icu qt3d qtbase qtconnectivity qtdeclarative qtgraphicaleffects qtimageformats qtlocation qtmultimedia qtquickcontrols qtquickcontrols2 qtremoteobjects qtscxml qtsensors qtsvg qttools qttranslations qtwayland qtwebchannel qtwebsockets qtwebview qtx11extras qtxmlpatterns'
+  MACOX_X86_64_QT5_ARCHIVES: 'd3dcompiler_47 opengl32sw qt3d qtactiveqt qtbase qtconnectivity qtdeclarative qtgraphicaleffects qtimageformats qtlocation qtmultimedia qtquickcontrols qtquickcontrols2 qtremoteobjects qtscxml qtsensors qtsvg qttools qttranslations qtwebchannel qtwebsockets qtwebview qtwinextras qtxmlpatterns'
+  WINDOWS_QT5_ARCHIVES: 'd3dcompiler_47 opengl32sw qt3d qtactiveqt qtbase qtconnectivity qtdeclarative qtgraphicaleffects qtimageformats qtlocation qtmultimedia qtquickcontrols qtquickcontrols2 qtremoteobjects qtscxml qtsensors qtsvg qttools qttranslations qtwebchannel qtwebsockets qtwebview qtwinextras qtxmlpatterns'
+
+  ROCKY_QT6_MODULES: 'debug_info qt3d qt5compat qtcharts qtconnectivity qtdatavis3d qtgrpc qthttpserver qtimageformats qtlanguageserver qtlocation qtlottie qtmultimedia qtnetworkauth qtpdf qtpositioning qtquick3d qtquick3dphysics qtquickeffectmaker qtquicktimeline qtremoteobjects qtscxml qtsensors qtserialbus qtserialport qtshadertools qtspeech qtvirtualkeyboard qtwaylandcompositor qtwebchannel qtwebengine qtwebsockets qtwebview'
+  ROCKY_QT6_ARCHIVES: 'icu qtbase qtdeclarative qtsvg qttools qttranslations qtwayland'
+  MACOX_X86_64_QT6_MODULES: 'debug_info qt3d qt5compat qtcharts qtconnectivity qtdatavis3d qtgrpc qthttpserver qtimageformats qtlanguageserver qtlocation qtlottie qtmultimedia qtnetworkauth qtpdf qtpositioning qtquick3d qtquick3dphysics qtquickeffectmaker qtquicktimeline qtremoteobjects qtscxml qtsensors qtserialbus qtserialport qtshadertools qtspeech qtvirtualkeyboard qtwebchannel qtwebengine qtwebsockets qtwebview'
+  MACOX_X86_64_QT6_ARCHIVES: 'qtbase qtdeclarative qtsvg qttools qttranslations'
+  WINDOWS_QT6_MODULES: 'debug_info qt3d qt5compat qtactiveqt qtcharts qtconnectivity qtdatavis3d qtgrpc qthttpserver qtimageformats qtlanguageserver qtlocation qtlottie qtmultimedia qtnetworkauth qtpdf qtpositioning qtquick3d qtquick3dphysics qtquickeffectmaker qtquicktimeline qtremoteobjects qtscxml qtsensors qtserialbus qtserialport qtshadertools qtspeech qtvirtualkeyboard qtwebchannel qtwebengine qtwebsockets qtwebview'
+  WINDOWS_QT6_ARCHIVES: 'd3dcompiler_47 opengl32sw qtbase qtdeclarative qtsvg qttools qttranslations'
+
+jobs:
+  windows:
+    # if: ${{ github.repository_owner == 'AcademySoftwareFoundation' }}
+    name: 'Windows ${{ matrix.vfx-platform }}
+      <${{ matrix.os }}
+       msvc=${{ matrix.msvc-component }},
+       qt=${{ matrix.qt-version }},
+       python=${{ matrix.python-version }},
+       cmake=${{ matrix.cmake-version }},
+       arch=${{ matrix.arch-type }},
+       config=${{ matrix.build-type }}>'
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: "windows-2022"
+            arch-type: "x86_64"
+            build-type: "Release"
+            qt-version: "5.15.2"
+            python-version: "3.10"
+            cmake-version: "3.31.6"
+            vfx-platform: "CY2023"
+            msvc-component: "14.40.17.10.x86.x64"
+            msvc-compiler: "14.40.33807"
+          - os: "windows-2022"
+            arch-type: "x86_64"
+            build-type: "Debug"
+            qt-version: "5.15.2"
+            python-version: "3.10"
+            cmake-version: "3.31.6"
+            vfx-platform: "CY2023"
+            msvc-component: "14.40.17.10.x86.x64"
+            msvc-compiler: "14.40.33807"
+
+          # VFX2024
+          - os: "windows-2022"
+            arch-type: "x86_64"
+            build-type: "Release"
+            qt-version: "6.5.3"
+            python-version: "3.11"
+            cmake-version: "3.31.6"
+            vfx-platform: "CY2024"
+            msvc-component: "14.40.17.10.x86.x64"
+            msvc-compiler: "14.40.33807"
+          - os: "windows-2022"
+            arch-type: "x86_64"
+            build-type: "Debug"
+            qt-version: "6.5.3"
+            python-version: "3.11"
+            cmake-version: "3.31.6"
+            vfx-platform: "CY2024"
+            msvc-component: "14.40.17.10.x86.x64"
+            msvc-compiler: "14.40.33807"
+
+    runs-on: windows-latest  #${{ matrix.os }}
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # 4.1.7
+        with:
+          submodules: recursive
+
+      - name: Install MSVC components ${{ matrix.msvc-component }}
+        run: |
+          Set-Location "C:\Program Files (x86)\Microsoft Visual Studio\Installer\"
+          $InstallPath = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
+          $componentsToRemove= @(
+            "Microsoft.VisualStudio.Component.VC.${{ matrix.msvc-component }}"
+            "Microsoft.VisualStudio.Component.VC.${{ matrix.msvc-component }}.Spectre"
+          )
+          [string]$workloadArgs = $componentsToRemove | ForEach-Object {" --add " +  $_}
+          $Arguments = ('/c', "vs_installer.exe", 'modify', '--installPath', "`"$InstallPath`"",$workloadArgs, '--quiet', '--norestart', '--nocache')
+          # should be run twice
+          $process = Start-Process -FilePath cmd.exe -ArgumentList $Arguments -Wait -PassThru -WindowStyle Hidden
+          $process = Start-Process -FilePath cmd.exe -ArgumentList $Arguments -Wait -PassThru -WindowStyle Hidden
+          
+      - name: Set up MSVC ${{ matrix.msvc-compiler }}
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          toolset: ${{ matrix.msvc-compiler }}
+          arch: '${{ matrix.arch-type }}'
+
+      - name: Setup msys2 and install dependencies
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          # False because it keep creating new cache entry.
+          cache: false
+          install: >-
+            mingw-w64-x86_64-autotools
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-cmake-cmcldeps
+            mingw-w64-x86_64-glew
+            mingw-w64-x86_64-libarchive
+            mingw-w64-x86_64-make
+            mingw-w64-x86_64-meson
+            mingw-w64-x86_64-toolchain
+            autoconf
+            automake
+            bison
+            flex
+            git
+            libtool
+            nasm
+            p7zip
+            patch
+            unzip
+            zip
+    
+      - name: Activate Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '${{ matrix.python-version }}'
+
+      - name: Display Python installation location
+        run: |
+          python -c "import sys; print(sys.executable)"
+          python -m pip --version
+        shell: pwsh
+
+      - name: Get Python path for msys2
+        id: python-path
+        run: |
+          $pythonPath = (python -c "import sys; print(sys.executable)").Replace('\', '/')
+          $pythonDir = Split-Path $pythonPath
+          $pythonDirUnix = $pythonDir.Replace('C:', '/c').Replace('\', '/')
+          $pythonScriptsUnix = "$pythonDirUnix/Scripts"
+          echo "python_dir=$pythonDirUnix" >> $env:GITHUB_OUTPUT
+          echo "python_scripts=$pythonScriptsUnix" >> $env:GITHUB_OUTPUT
+          echo "Python directory: $pythonDirUnix"
+          echo "Python scripts: $pythonScriptsUnix"
+        shell: pwsh
+        
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache CMake for Windows
+        uses: actions/cache@v4
+        id: windows-cmake-cache
+        with:
+          path: "C:/Program Files/CMake"
+          key: ${{ runner.os }}-cmake-${{ matrix.cmake-version }}
+
+      - name: Install CMake ${{ matrix.cmake-version }} with chocolatey
+        if: steps.windows-cmake-cache.outputs.cache-hit != 'true'
+        run: |
+          choco install cmake --version=${{ matrix.cmake-version }} --allow-downgrade
+          
+      - name: Set PATH environment variable
+        run: |
+          echo "export PATH=\"${{ steps.python-path.outputs.python_dir }}:${{ steps.python-path.outputs.python_scripts }}:/c/Program Files/CMake/bin:/c/msys64/mingw64/bin:\$PATH:/c/Strawberry/c/bin:/c/Strawberry/perl/site/bin:/c/Strawberry/perl/bin\"" >> ~/.bash_profile
+          echo "alias python='${{ steps.python-path.outputs.python_dir }}/python.exe'" >> ~/.bash_profile
+          echo "alias pip='${{ steps.python-path.outputs.python_dir }}/python.exe -m pip'" >> ~/.bash_profile
+        shell: msys2 {0}
+
+      - name: Set ACLOCAL_PATH environment variable
+        run: |
+          echo "export ACLOCAL_PATH=/c/msys64/usr/share/aclocal" >> ~/.bash_profile
+        shell: msys2 {0}
+
+      - name: Add Rust to PATH for msys2
+        run: |
+          echo "export PATH=\"/c/Users/runneradmin/.cargo/bin:\$PATH\"" >> ~/.bash_profile
+        shell: msys2 {0}
+
+      - name: Display environment variables
+        run: |
+          echo "=== PATH ==="
+          echo $PATH
+          echo "=== ACLOCAL_PATH ==="
+          echo $ACLOCAL_PATH
+          echo "=== Python location ==="
+          which python
+          python --version
+          echo "=== Pip version ==="
+          python -m pip --version
+          echo "=== Rust ==="
+          rustc --version || echo "WARNING: Rust not found in msys2 PATH"
+          cargo --version || echo "WARNING: Cargo not found in msys2 PATH"
+        shell: msys2 {0}
+    
+      - name: Prepare Qt folder
+        run: |
+          mkdir -p /c/qt
+        shell: msys2 {0}
+
+      - name: Install Qt ${{ matrix.qt-version }}
+        if: ${{ matrix.vfx-platform == 'CY2023' }}
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '${{ matrix.qt-version }}'
+          host: 'windows'
+          target: 'desktop'
+          arch: 'win64_msvc2019_64'
+          dir: "c:/"
+          install-deps: 'false'
+          modules: ${{ env.QT5_MODULES }}
+          archives: ${{ env.WINDOWS_QT5_ARCHIVES }}
+          # Caching only save 2 minutes. Keep the cache for longer operations.
+          cache: false
+          setup-python: 'false'
+          tools: 'tools_qtcreator'
+          set-env: 'true'
+          tools-only: 'false'
+          aqtversion: '==3.2.*'
+
+      - name: Install Qt ${{ matrix.qt-version }}
+        if: ${{ matrix.vfx-platform == 'CY2024' }}
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '${{ matrix.qt-version }}'
+          host: 'windows'
+          target: 'desktop'
+          arch: 'win64_msvc2019_64'
+          dir: "c:/"
+          install-deps: 'false'
+          modules: ${{ env.WINDOWS_QT6_MODULES }}
+          archives: ${{ env.WINDOWS_QT6_ARCHIVES }}
+          # Caching only save 2 minutes. Keep the cache for longer operations.
+          cache: false
+          setup-python: 'false'
+          tools: 'tools_qtcreator'
+          set-env: 'true'
+          tools-only: 'false'
+          aqtversion: '==3.2.*'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --user --upgrade -r ./requirements.txt
+        shell: msys2 {0}
+
+      - name: Cache OpenRV dependencies
+        uses: actions/cache@v4
+        id: cmake-dependencies-cache
+        if: ${{ github.event.inputs.SKIP_DEPS_CACHE != 'true' }}
+        with:
+          path: |
+            _build/RV_DEPS_*
+            _build/_deps
+          key: ${{ runner.os }}-${{ matrix.vfx-platform }}-${{ matrix.build-type }}-deps-${{ hashFiles('**/CMakeLists.txt', '**/cmake/**') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.vfx-platform }}-${{ matrix.build-type }}-deps-
+
+      - name: Configure OpenRV
+        run: |
+          cmake --version
+          export QT_HOME=c:/Qt/${{ matrix.qt-version }}/msvc2019_64
+          cmake -B _build -G "Visual Studio 17 2022" -A x64 -DRV_DEPS_WIN_PERL_ROOT=c:/Strawberry/perl/bin -DCMAKE_BUILD_TYPE=${{ matrix.build-type }} -DRV_DEPS_QT_LOCATION=$QT_HOME -DRV_VFX_PLATFORM=${{ matrix.vfx-platform }}
+        shell: msys2 {0}
+          
+      - name: Build OpenRV dependencies
+        if: steps.cmake-dependencies-cache.outputs.cache-hit != 'true'
+        run: |
+          cmake --build _build --config ${{ matrix.build-type }} --target dependencies --parallel=$(python -c 'import os; print(os.cpu_count())') -v
+        shell: msys2 {0}
+
+      - name: Build OpenRV main executable
+        run: |
+          cmake --build _build --config ${{ matrix.build-type }} --target main_executable --parallel=$(python -c 'import os; print(os.cpu_count())') -v
+        shell: msys2 {0}
+
+      - name: Tests
+        continue-on-error: true
+        run: |
+          ls -al _build/stage/app/bin
+          ctest --test-dir _build -C ${{ matrix.build-type }} --extra-verbose
+        shell: msys2 {0}
+
+      - name: Install OpenRV
+        run: |
+          cmake --install _build --prefix $(pwd)/_install --config ${{ matrix.build-type }}
+        shell: msys2 {0}
+
+      - name: Get the release file name
+        run: |
+          echo "OPENRV_RELEASE_FILENAME=OpenRV_${{  github.ref_name }}_$(git rev-parse --short HEAD)_${{ matrix.os }}_${{ matrix.arch-type }}_${{ matrix.vfx-platform }}_${{ matrix.build-type }}" >> $GITHUB_ENV
+        shell: msys2 {0}
+
+      - name: Create zip file of OpenRV installation
+        run: |
+          zip -r ${{ env.OPENRV_RELEASE_FILENAME }}.zip _install/
+        shell: msys2 {0}
+
+      # - name: Upload OpenRV artifact file
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: ${{ env.OPENRV_RELEASE_FILENAME }}
+      #     path: ${{ env.OPENRV_RELEASE_FILENAME }}.zip
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        if: success() && matrix.build-type == 'Release'
+        with:
+          name: openrv-${{ matrix.vfx-platform }}-${{ matrix.build-type }}-${{ matrix.os }}
+          path: _install/
+          retention-days: 90
+        
