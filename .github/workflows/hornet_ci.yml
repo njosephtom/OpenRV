@@ -1,4 +1,4 @@
-name: OpenRV_Build
+name: OpenRV_Hornet_Build
 
 on:
   # push:
