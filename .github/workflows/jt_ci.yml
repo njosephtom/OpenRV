@@ -1,4 +1,4 @@
-name: OpenRV_Hornet_Build
+name: OpenRV_Build
 
 on:
   # push:
@@ -34,7 +34,7 @@ env:
   WINDOWS_QT6_ARCHIVES: 'd3dcompiler_47 opengl32sw qtbase qtdeclarative qtsvg qttools qttranslations'
 
 jobs:
-macos:
+  macos:
     name: '${{ matrix.os }} ${{ matrix.arch-type }} ${{ matrix.vfx-platform }}
       <qt=${{ matrix.qt-version }},
        python=${{ matrix.python-version }},
@@ -279,7 +279,7 @@ macos:
       - name: Get the release file name
         run: |
             echo "OPENRV_RELEASE_FILENAME=OpenRV_${{ github.ref_name }}_$(git rev-parse --short HEAD)_${{ matrix.os }}_${{ matrix.arch-type }}_${{ matrix.vfx-platform }}_${{ matrix.build-type }}" >> $GITHUB_ENV
-          shell: bash
+        shell: bash
       
       - name: Create zip file of OpenRV installation
         run: |
